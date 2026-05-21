@@ -173,7 +173,7 @@ def main():
 
     model = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
 
-    checkpoint = torch.load(args.checkpoint, map_location='cpu')
+    checkpoint = torch.load(args.checkpoint, map_location='cpu', weights_only=False)
     state_dict = checkpoint['state_dict']
 
     if list(state_dict.keys())[0].startswith("module."):

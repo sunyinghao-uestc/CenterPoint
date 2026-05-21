@@ -87,7 +87,7 @@ class Processor_ROS:
         cfg = Config.fromfile(self.config_path)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.net = build_detector(cfg.model, train_cfg=None, test_cfg=cfg.test_cfg)
-        self.net.load_state_dict(torch.load(self.model_path)["state_dict"])
+        self.net.load_state_dict(torch.load(self.model_path, weights_only=False)["state_dict"])
         self.net = self.net.to(self.device).eval()
 
         self.range = cfg.voxel_generator.range
