@@ -134,6 +134,7 @@ class LoadPointCloudFromFile(object):
                 nsweeps, len(info["sweeps"])
             )
 
+            # 每个epoch看到不同的帧组合/顺序，不依赖固定的时序模式
             for i in np.random.choice(len(info["sweeps"]), nsweeps - 1, replace=False):
                 sweep = info["sweeps"][i]
                 points_sweep, times_sweep = read_sweep(sweep, virtual=res["virtual"])
