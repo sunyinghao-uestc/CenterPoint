@@ -431,7 +431,7 @@ def _fill_trainval_infos(nusc, train_scenes, val_scenes, test=False, nsweeps=10,
                     }
                     sweeps.append(sweep)
                 else:
-                    sweeps.append(sweeps[-1])
+                    sweeps.append(sweeps[-1]) # 重复最后一帧来补齐
             else:
                 curr_sd_rec = nusc.get("sample_data", curr_sd_rec["prev"])
 
