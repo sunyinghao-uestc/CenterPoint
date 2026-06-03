@@ -53,6 +53,16 @@ NUSC_CLASS_NAMES = [
     "barrier", "motorcycle", "bicycle", "pedestrian", "traffic_cone",
 ]
 
+# 6 detection tasks matching the config
+HM_TASK_NAMES = [
+    "car",
+    "truck_construction_vehicle",
+    "bus_trailer",
+    "barrier",
+    "motorcycle_bicycle",
+    "pedestrian_traffic_cone",
+]
+
 # nuScenes official detection colors (RGB)
 DETECTION_COLORS = {
     "car": (0, 0, 142),
@@ -181,6 +191,13 @@ def main():
             cam_out_dirs[cam_name] = os.path.join(args.out_dir, cam_name)
             os.makedirs(cam_out_dirs[cam_name], exist_ok=True)
 
+    # Heatmap output directories
+    hm_out_dir = os.path.join(args.out_dir, "heatmap")
+    hm_task_dirs = {}
+    for task_name in HM_TASK_NAMES:
+        hm_task_dirs[task_name] = os.path.join(hm_out_dir, task_name)
+        os.makedirs(hm_task_dirs[task_name], exist_ok=True)
+
     with open(args.prediction, "rb") as f:
         predictions = pickle.load(f)
 
@@ -286,6 +303,25 @@ def main():
 
         if (idx + 1) % 10 == 0:
             print(f"  Rendered {idx + 1}/{len(sample_tokens)}")
+
+        # ================================================================
+        # Heatmap visualization
+        # ================================================================
+        hm = pred["hm"].detach().cpu().numpy()
+        num_tasks = len(HM_TASK_NAMES)
+        h_per_task = hm.shape[0] // num_tasks
+
+        for t, task_name in enumerate(HM_TASK_NAMES):
+            hm_task = hm[t * h_per_task : (t + 1) * h_per_task, :]
+
+            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+            ax.imshow(hm_task, cmap="jet", origin="lower", vmin=0, vmax=1)
+            ax.set_title(f"{sample_token[:16]}...\n{task_name}")
+            ax.axis("off")
+
+            hm_path = os.path.join(hm_task_dirs[task_name], f"{sample_token}.png")
+            plt.savefig(hm_path, bbox_inches="tight", pad_inches=0.1, dpi=100)
+            plt.close(fig)
 
     print(f"Done. Results saved to {args.out_dir}")
 
