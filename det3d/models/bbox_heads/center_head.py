@@ -442,8 +442,10 @@ class CenterHead(nn.Module):
         for i in range(num_samples):
             ret = {}
             for k in rets[0][i].keys():
-                if k in ["box3d_lidar", "scores", "hm"]:
+                if k in ["box3d_lidar", "scores"]:
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
+                elif dump_hm and k == 'hm':
+                    ret[k] = torch.stack([ret[i][k] for ret in rets])
                 elif k in ["label_preds"]:
                     flag = 0
                     for j, num_class in enumerate(self.num_classes):
@@ -452,9 +454,19 @@ class CenterHead(nn.Module):
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
 
             ret['metadata'] = metas[0][i]
+
+            # Forward GT heatmaps if available (from AssignLabel in val mode)
+            if dump_hm and 'hm' in example:
+                # example['hm']: list of (batch, num_cls, H, W) per task
+                # Average over class dim per task to match prediction hm format
+                gt_hm_parts = []
+                for hm_task in example['hm']:
+                    gt_hm_parts.append(hm_task[i].mean(dim=0, keepdim=True))
+                ret['gt_hm'] = torch.cat(gt_hm_parts, dim=0)
+
             ret_list.append(ret)
 
-        return ret_list 
+        return ret_list
 
     @torch.no_grad()
     def post_processing(self, batch_box_preds, batch_hm, test_cfg, post_center_range, task_id, dump_hm, H, W):

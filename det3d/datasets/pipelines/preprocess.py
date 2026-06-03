@@ -31,11 +31,11 @@ class Preprocess(object):
         self.min_points_in_gt = cfg.get("min_points_in_gt", -1)
         
         self.mode = cfg.mode
+        self.class_names = cfg.get('class_names', [])
         if self.mode == "train":
             self.global_rotation_noise = cfg.global_rot_noise
             self.global_scaling_noise = cfg.global_scale_noise
             self.global_translate_std = cfg.get('global_translate_std', 0)
-            self.class_names = cfg.class_names
             if cfg.db_sampler != None:
                 self.db_sampler = build_dbsampler(cfg.db_sampler)
             else:
@@ -147,12 +147,27 @@ class Preprocess(object):
             gt_dict["gt_classes"] = gt_classes
 
 
+        elif self.mode == "val":
+            gt_dict = {
+                "gt_boxes": res["lidar"]["annotations"]["boxes"],
+                "gt_names": np.array(res["lidar"]["annotations"]["names"]).reshape(-1),
+            }
+            gt_boxes_mask = np.array(
+                [n in self.class_names for n in gt_dict["gt_names"]], dtype=np.bool_
+            )
+            _dict_select(gt_dict, gt_boxes_mask)
+            gt_classes = np.array(
+                [self.class_names.index(n) + 1 for n in gt_dict["gt_names"]],
+                dtype=np.int32,
+            )
+            gt_dict["gt_classes"] = gt_classes
+
         if self.shuffle_points:
             np.random.shuffle(points)
 
         res["lidar"]["points"] = points
 
-        if self.mode == "train":
+        if self.mode in ("train", "val"):
             res["lidar"]["annotations"] = gt_dict
 
         return res, info
@@ -289,7 +304,7 @@ class AssignLabel(object):
 
         example = {}
 
-        if res["mode"] == "train":
+        if res["mode"] in ("train", "val"):
             # Calculate output featuremap size
             if 'voxels' in res['lidar']:
                 # Calculate output featuremap size

@@ -136,6 +136,7 @@ train_preprocessor = dict(
 val_preprocessor = dict(
     mode="val",
     shuffle_points=False,
+    class_names=class_names,
 )
 
 voxel_generator = dict(

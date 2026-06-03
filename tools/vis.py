@@ -198,6 +198,12 @@ def main():
         hm_task_dirs[task_name] = os.path.join(hm_out_dir, task_name)
         os.makedirs(hm_task_dirs[task_name], exist_ok=True)
 
+    hm_gt_out_dir = os.path.join(args.out_dir, "heatmap_gt")
+    hm_gt_task_dirs = {}
+    for task_name in HM_TASK_NAMES:
+        hm_gt_task_dirs[task_name] = os.path.join(hm_gt_out_dir, task_name)
+        os.makedirs(hm_gt_task_dirs[task_name], exist_ok=True)
+
     with open(args.prediction, "rb") as f:
         predictions = pickle.load(f)
 
@@ -307,12 +313,9 @@ def main():
         # ================================================================
         # Heatmap visualization
         # ================================================================
-        hm = pred["hm"].detach().cpu().numpy()
-        num_tasks = len(HM_TASK_NAMES)
-        h_per_task = hm.shape[0] // num_tasks
-
+        hm = pred["hm"].detach().cpu().numpy()  # shape: (6, 180, 180)
         for t, task_name in enumerate(HM_TASK_NAMES):
-            hm_task = hm[t * h_per_task : (t + 1) * h_per_task, :]
+            hm_task = hm[t]
 
             fig, ax = plt.subplots(1, 1, figsize=(8, 8))
             ax.imshow(hm_task, cmap="jet", origin="lower", vmin=0, vmax=1)
@@ -322,6 +325,21 @@ def main():
             hm_path = os.path.join(hm_task_dirs[task_name], f"{sample_token}.png")
             plt.savefig(hm_path, bbox_inches="tight", pad_inches=0.1, dpi=100)
             plt.close(fig)
+
+        # GT heatmap (if available)
+        if "gt_hm" in pred:
+            gt_hm = pred["gt_hm"].detach().cpu().numpy()
+            for t, task_name in enumerate(HM_TASK_NAMES):
+                gt_hm_task = gt_hm[t]  # shape: (180, 180)
+
+                fig, ax = plt.subplots(1, 1, figsize=(8, 8))
+                ax.imshow(gt_hm_task, cmap="jet", origin="lower", vmin=0, vmax=1)
+                ax.set_title(f"{sample_token[:16]}...\nGT {task_name}")
+                ax.axis("off")
+
+                hm_gt_path = os.path.join(hm_gt_task_dirs[task_name], f"{sample_token}.png")
+                plt.savefig(hm_gt_path, bbox_inches="tight", pad_inches=0.1, dpi=100)
+                plt.close(fig)
 
     print(f"Done. Results saved to {args.out_dir}")
 

@@ -41,6 +41,8 @@ class Reformat(object):
             data_bundle.update(res["lidar"]["targets"])
         elif res["mode"] == "val":
             data_bundle.update(dict(metadata=meta, ))
+            if 'targets' in res['lidar']:
+                data_bundle.update(res['lidar']['targets'])
 
             if self.double_flip:
                 # y axis 
