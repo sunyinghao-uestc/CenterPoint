@@ -114,7 +114,7 @@ def main():
 
     data_loader = build_dataloader(
         dataset,
-        batch_size=cfg.data.samples_per_gpu if not args.speed_test else 1,
+        batch_size=cfg.data.samples_per_gpu if not args.speed_test else 1, # speed_test模式为单帧速度测试
         workers_per_gpu=cfg.data.workers_per_gpu,
         dist=distributed,
         shuffle=False,
@@ -147,7 +147,7 @@ def main():
     cpu_device = torch.device("cpu")
 
     start = time.time()
-
+    # speed_test模式下，测量数据集中间1/3的运行时间
     start = int(len(dataset) / 3)
     end = int(len(dataset) * 2 /3)
 
