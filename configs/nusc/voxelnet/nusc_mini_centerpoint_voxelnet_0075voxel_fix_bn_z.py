@@ -188,6 +188,7 @@ data = dict(
         nsweeps=nsweeps,
         class_names=class_names,
         pipeline=test_pipeline,
+        version="v1.0-mini",
     ),
     test=dict(
         type=dataset_type,
