@@ -339,13 +339,20 @@ class CenterHead(nn.Module):
                 if double_flip:
                     meta_list = meta_list[:4*int(batch_size):4]
 
+            # heatmap解码
             batch_hm = torch.sigmoid(preds_dict['hm'])
 
+            # 尺寸解码
             batch_dim = torch.exp(preds_dict['dim'])
 
+            # 角度解码
             batch_rots = preds_dict['rot'][..., 0:1]
             batch_rotc = preds_dict['rot'][..., 1:2]
+
+            # 中心偏移解码
             batch_reg = preds_dict['reg']
+
+            # 高度解码
             batch_hei = preds_dict['height']
 
             if double_flip:
@@ -397,6 +404,7 @@ class CenterHead(nn.Module):
             xs = xs.view(batch, -1, 1) + batch_reg[:, :, 0:1]
             ys = ys.view(batch, -1, 1) + batch_reg[:, :, 1:2]
 
+            # 真实X = (网格X + 回归偏移X) × 下采样倍数 × 体素大小 + 点云起始X
             xs = xs * test_cfg.out_size_factor * test_cfg.voxel_size[0] + test_cfg.pc_range[0]
             ys = ys * test_cfg.out_size_factor * test_cfg.voxel_size[1] + test_cfg.pc_range[1]
 
