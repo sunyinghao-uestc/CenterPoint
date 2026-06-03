@@ -214,7 +214,7 @@ class CenterHead(nn.Module):
         )
 
         self.tasks = nn.ModuleList()
-        print("Use HM Bias: ", init_bias)
+        print("Use HM Bias: ", init_bias) # -2.19，sigmoid后约0.1，模型一开始就认为"每个位置只有10%概率是物体中心"，避免大量误检初期训练不稳定
 
         if dcn_head:
             print("Use Deformable Convolution in the CenterHead!")
@@ -291,7 +291,7 @@ class CenterHead(nn.Module):
         return rets_merged
 
     @torch.no_grad()
-    def predict(self, example, preds_dicts, test_cfg, **kwargs):
+    def predict(self, example, preds_dicts, test_cfg, dump_hm, **kwargs):
         """decode, nms, then return the detection result. Additionaly support double flip testing 
         """
         # get loss info
@@ -398,6 +398,8 @@ class CenterHead(nn.Module):
             batch_hm = batch_hm.reshape(batch, H*W, num_cls)
 
             ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)])
+
+            # view: 增加batch维度；repeat: 沿batch维度重复batch次; to: 放到跟batch_hm一样的设备上
             ys = ys.view(1, H, W).repeat(batch, 1, 1).to(batch_hm)
             xs = xs.view(1, H, W).repeat(batch, 1, 1).to(batch_hm)
 
@@ -431,17 +433,16 @@ class CenterHead(nn.Module):
             if test_cfg.get('per_class_nms', False):
                 pass 
             else:
-                rets.append(self.post_processing(batch_box_preds, batch_hm, test_cfg, post_center_range, task_id)) 
+                rets.append(self.post_processing(batch_box_preds, batch_hm, test_cfg, post_center_range, task_id, dump_hm, H, W))
 
         # Merge branches results
-        ret_list = []
         num_samples = len(rets[0])
 
         ret_list = []
         for i in range(num_samples):
             ret = {}
             for k in rets[0][i].keys():
-                if k in ["box3d_lidar", "scores"]:
+                if k in ["box3d_lidar", "scores", "hm"]:
                     ret[k] = torch.cat([ret[i][k] for ret in rets])
                 elif k in ["label_preds"]:
                     flag = 0
@@ -456,7 +457,7 @@ class CenterHead(nn.Module):
         return ret_list 
 
     @torch.no_grad()
-    def post_processing(self, batch_box_preds, batch_hm, test_cfg, post_center_range, task_id):
+    def post_processing(self, batch_box_preds, batch_hm, test_cfg, post_center_range, task_id, dump_hm, H, W):
         batch_size = len(batch_hm)
 
         prediction_dicts = []
@@ -492,11 +493,19 @@ class CenterHead(nn.Module):
             selected_scores = scores[selected]
             selected_labels = labels[selected]
 
-            prediction_dict = {
-                'box3d_lidar': selected_boxes,
-                'scores': selected_scores,
-                'label_preds': selected_labels
-            }
+            if dump_hm:
+                prediction_dict = {
+                    'box3d_lidar': selected_boxes,
+                    'scores': selected_scores,
+                    'label_preds': selected_labels,
+                    'hm': torch.mean(hm_preds, dim=1, keepdim=True).reshape(H, W)
+                }
+            else:
+                prediction_dict = {
+                    'box3d_lidar': selected_boxes,
+                    'scores': selected_scores,
+                    'label_preds': selected_labels
+                }
 
             prediction_dicts.append(prediction_dict)
 

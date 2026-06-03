@@ -63,6 +63,8 @@ def parse_args():
     parser.add_argument("--local_rank", type=int, default=0)
     parser.add_argument("--testset", action="store_true")
 
+    parser.add_argument("--dump_hm", type=int, default=0)
+
     args = parser.parse_args()
     if "LOCAL_RANK" not in os.environ:
         os.environ["LOCAL_RANK"] = str(args.local_rank)
@@ -165,7 +167,7 @@ def main():
 
         with torch.no_grad():
             outputs = batch_processor(
-                model, data_batch, train_mode=False, local_rank=args.local_rank,
+                model, data_batch, train_mode=False, local_rank=args.local_rank, dump_hm=args.dump_hm,
             )
         for output in outputs:
             token = output["metadata"]["token"]
@@ -182,6 +184,7 @@ def main():
 
     synchronize()
 
+    # 多GPU预测统一收集
     all_predictions = all_gather(detections)
 
     print("\n Total time per frame: ", (time_end -  time_start) / (end - start))

@@ -96,13 +96,18 @@ def batch_processor(model, data, train_mode, **kwargs):
     else:
         device = None
 
+    if "dump_hm" in kwargs:
+        dump_hm = kwargs["dump_hm"]
+    else:
+        dump_hm = 0
+
     # data = example_convert_to_torch(data, device=device)
     example = example_to_device(data, device, non_blocking=False)
 
     del data
 
     if train_mode:
-        losses = model(example, return_loss=True)
+        losses = model(example, return_loss=True, dump_hm=dump_hm)
         loss, log_vars = parse_second_losses(losses)
 
         outputs = dict(
@@ -110,7 +115,7 @@ def batch_processor(model, data, train_mode, **kwargs):
         )
         return outputs
     else:
-        return model(example, return_loss=False)
+        return model(example, return_loss=False, dump_hm=dump_hm)
 
 def batch_processor_ensemble(model1, model2, data, train_mode, **kwargs):
     assert 0, 'deprecated'
